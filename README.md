@@ -2,6 +2,8 @@
 
 A calm, responsive personal planning dashboard designed for desktop Safari and iPad.
 
+Includes two editorial image-backed card themes inspired by the supplied red/black and blue/silver references, alongside the original calm palettes.
+
 ## Run locally
 
 Open `index.html` directly, or serve the directory with any static web server.
