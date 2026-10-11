@@ -20,6 +20,12 @@
       .main{padding-left:12px;padding-right:12px}.grid-2,.week-layout,.month-layout,.goals-layout{grid-template-columns:1.28fr .92fr}.evening-grid{grid-template-columns:.72fr 1.18fr .94fr}.tomorrow{grid-column:auto}.hero .quote{display:block}.calendar{min-width:0}.calendar .date{min-height:74px}.journey{min-height:650px}.goal-detail{min-width:0}.goal-choice .bubble{display:none!important}.goal-choice{padding:10px;font-size:12px}.detail p{font-size:11px}.connection-flow{gap:8px}
     }
   </style>
+  <style>
+    .task > span{flex:1;min-width:0}
+    .task-action{width:30px;height:30px;flex:none;border:0;border-radius:9px;background:transparent;color:color-mix(in srgb,var(--ink) 55%,transparent);display:grid;place-items:center}
+    .task-action:hover{background:color-mix(in srgb,var(--accent) 15%,white);color:var(--ink)}
+    .task-delete:hover{background:#fee9e7;color:#a92e25}
+  </style>
 </head>
 <body>
   <div class="wallpaper"></div><div class="ambient"></div>
@@ -114,7 +120,7 @@
     $$('.nav button').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
     function showMode(mode){state.mode=mode;$('#morningView').hidden=mode!=='morning';$('#eveningView').hidden=mode!=='evening';persist();renderTasks()}
     document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key===','){e.preventDefault();openSettings()}});
-    function renderTasks(){['morningTasks','tomorrowTasks'].forEach(key=>{$$(`[data-store="${key}"]`).forEach(host=>{host.innerHTML=state[key].map((x,i)=>`<label class="task"><input class="check" type="checkbox" data-task="${key}" data-index="${i}" ${x.d?'checked':''}><span>${x.t}</span></label>`).join('')})});$$('[data-task]').forEach(c=>c.onchange=()=>{state[c.dataset.task][+c.dataset.index].d=c.checked;persist();renderTasks()});const done=state.morningTasks.filter(x=>x.d).length;$('#doneCount').textContent=`${done} of ${state.morningTasks.length}`}
+    function renderTasks(){['morningTasks','tomorrowTasks'].forEach(key=>{$$(`[data-store="${key}"]`).forEach(host=>{host.innerHTML=state[key].map((x,i)=>`<div class="task"><input class="check" type="checkbox" aria-label="Complete ${x.t}" data-task="${key}" data-index="${i}" ${x.d?'checked':''}><span>${x.t}</span><button class="task-action" data-edit-task="${key}" data-index="${i}" aria-label="Edit ${x.t}" title="Edit">✎</button><button class="task-action task-delete" data-delete-task="${key}" data-index="${i}" aria-label="Delete ${x.t}" title="Delete">×</button></div>`).join('')})});$$('[data-task]').forEach(c=>c.onchange=()=>{state[c.dataset.task][+c.dataset.index].d=c.checked;persist();renderTasks()});$$('[data-edit-task]').forEach(b=>b.onclick=()=>{const item=state[b.dataset.editTask][+b.dataset.index],text=prompt('Edit task',item.t);if(text?.trim()){item.t=text.trim();persist();renderTasks();toast('Task updated')}});$$('[data-delete-task]').forEach(b=>b.onclick=()=>{const key=b.dataset.deleteTask,index=+b.dataset.index;if(confirm(`Delete “${state[key][index].t}”?`)){state[key].splice(index,1);persist();renderTasks();toast('Task deleted')}});const done=state.morningTasks.filter(x=>x.d).length;$('#doneCount').textContent=`${done} of ${state.morningTasks.length}`}
     $$('[data-add-task]').forEach(b=>b.onclick=()=>{const t=prompt('New task');if(t?.trim()){state[b.dataset.addTask].push({t:t.trim(),d:false});persist();renderTasks()}});
     function renderTimes(){const h=$('#timeBlocks');h.innerHTML=state.timeBlocks.map((x,i)=>`<button class="timeblock ${x[2]}" data-edit-time="${i}" aria-label="Edit ${x[0]}"><span aria-hidden="true" style="position:absolute;right:9px;top:7px">✎</span><b>${x[0]}</b><small>${x[1]}</small></button>`).join('')+'<button class="timeblock empty" id="inlineAddTime">＋ Add</button>';$$('[data-edit-time]').forEach(b=>b.onclick=()=>openTimeEditor(+b.dataset.editTime));$('#inlineAddTime').onclick=addTime}
     let editingTimeIndex=-1;
