@@ -25,9 +25,14 @@
   </style>
   <style>
     .task > span{flex:1;min-width:0}
+    #mainOutcome,#tomorrowOutcome{min-width:120px;min-height:24px;border-radius:7px;padding:3px 5px;margin-left:-5px;cursor:text}
+    #mainOutcome:hover,#tomorrowOutcome:hover,#mainOutcome:focus,#tomorrowOutcome:focus{background:rgba(255,255,255,.7);outline:1px dashed color-mix(in srgb,var(--primary) 35%,transparent)}
+    #mainOutcome:empty:before{content:"Tap to add today’s main outcome";color:color-mix(in srgb,var(--ink) 42%,transparent);font-weight:500}
+    #tomorrowOutcome:empty:before{content:"Tap to add tomorrow’s main outcome";color:color-mix(in srgb,var(--ink) 42%,transparent);font-weight:500}
     .task-action{width:30px;height:30px;flex:none;border:0;border-radius:9px;background:transparent;color:color-mix(in srgb,var(--ink) 55%,transparent);display:grid;place-items:center}
     .task-action:hover{background:color-mix(in srgb,var(--accent) 15%,white);color:var(--ink)}
     .task-delete:hover{background:#fee9e7;color:#a92e25}
+    .record-copy{flex:1;min-width:0}.record-actions{display:flex;gap:3px;margin-left:auto}.record .task-action{background:rgba(255,255,255,.55)}
     .goal-choice .bubble{display:inline-grid!important;color:var(--primary)}
     .goal-choice .bubble svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
     #focusRing{background:conic-gradient(var(--accent) 0 0%,color-mix(in srgb,var(--accent) 15%,white) 0%)}
@@ -190,7 +195,9 @@
     $$('.quick-open').forEach(b=>b.onclick=()=>openRecord(b.dataset.kind));$$('.modal-close').forEach(b=>b.onclick=()=>$('#recordModal').classList.remove('open'));
     $('#saveRecord').onclick=()=>{const text=$('#recordText').value.trim(), amount=$('#recordAmount').value, file=$('#recordFile').files[0];const content=[text,file?.name,amount?`£${(+amount).toFixed(2)}`:''].filter(Boolean).join(' · ');if(!content){toast('Add something to save');return}selectedRecords().push({kind:recordKind,text:content,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});persist();renderRecords();$('#recordModal').classList.remove('open');toast('Record saved')};
     const recordIcon=kind=>kind.includes('Expense')?'i-pound':kind.includes('Photo')||kind.includes('File')?'i-photo':kind.includes('Link')?'i-link':'i-progress';
-    function renderRecords(){const records=selectedRecords(),rows=records.slice(-5);$('#eveningRecords').innerHTML=rows.map(x=>`<div class="record"><time>${x.time}</time><span class="bubble"><svg class="system-icon"><use href="#${recordIcon(x.kind)}"/></svg></span><span>${x.text}</span></div>`).join('');$('#recentRecords').textContent=records.length?`${records.length} records captured for this day`:'No records yet'}
+    function recordMarkup(x,i){return `<div class="record"><time>${escapeHtml(x.time)}</time><span class="bubble"><svg class="system-icon"><use href="#${recordIcon(x.kind)}"/></svg></span><span class="record-copy">${escapeHtml(x.text)}</span><span class="record-actions"><button class="task-action" data-edit-record="${i}" aria-label="Edit record" title="Edit">✎</button><button class="task-action task-delete" data-delete-record="${i}" aria-label="Delete record" title="Delete">×</button></span></div>`}
+    function bindRecordActions(){$$('[data-edit-record]').forEach(b=>b.onclick=()=>{const item=selectedRecords()[+b.dataset.editRecord],text=prompt('Edit record',item.text);if(text?.trim()){item.text=text.trim();persist();renderRecords();toast('Record updated')}});$$('[data-delete-record]').forEach(b=>b.onclick=()=>{const records=selectedRecords(),i=+b.dataset.deleteRecord;if(confirm('Delete this record?')){records.splice(i,1);persist();renderRecords();toast('Record deleted')}})}
+    function renderRecords(){const records=selectedRecords(),start=Math.max(0,records.length-5),rows=records.slice(start);$('#eveningRecords').innerHTML=rows.map((x,i)=>recordMarkup(x,start+i)).join('');$('#recentRecords').innerHTML=records.length?rows.map((x,i)=>recordMarkup(x,start+i)).join(''):'No records yet';bindRecordActions()}
     const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const formatHistoryDate=key=>new Date(`${key}T12:00:00`).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     const allDays=()=>({...state.history,[state.lastDate]:snapshotDay()});
