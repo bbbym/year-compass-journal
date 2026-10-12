@@ -38,6 +38,7 @@
     .system-icon{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
     .ico .system-icon,.bubble .system-icon,.round .system-icon{margin:auto}
     .history-list{display:grid;gap:14px;margin-top:18px}.history-day{padding:20px;border:1px solid var(--line);border-radius:20px;background:color-mix(in srgb,var(--card) 94%,transparent)}.history-day-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.history-day-head h3{margin:0;font-size:20px}.history-summary{display:flex;gap:8px;flex-wrap:wrap}.history-summary span{padding:6px 10px;border-radius:999px;background:var(--soft);font-size:11px}.history-columns{display:grid;grid-template-columns:1fr 1fr;gap:18px}.history-columns h4{margin:0 0 7px}.history-columns p{margin:5px 0;font-size:13px}.history-empty{padding:38px;text-align:center;color:color-mix(in srgb,var(--ink) 55%,transparent)}.history-tools{display:flex;align-items:center;gap:10px}.history-tools input{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px}.history-edit{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 11px;font-size:12px}.history-editor textarea{min-height:92px;resize:vertical}
+    .today-date-switch{display:flex;justify-content:flex-end;align-items:center;gap:9px;margin:0 0 12px}.today-date-switch label{font-size:12px;font-weight:750}.today-date-switch input{border:1px solid var(--line);background:color-mix(in srgb,var(--card) 94%,white);border-radius:12px;padding:8px 11px}.today-date-switch button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;font-size:12px}.today-date-switch .editing-note{margin-right:auto;color:color-mix(in srgb,var(--ink) 55%,transparent);font-size:12px}
     @media(max-width:720px){.nav{grid-template-columns:repeat(5,1fr)}.history-columns{grid-template-columns:1fr}}
   </style>
 </head>
@@ -77,6 +78,7 @@
       </div>
 
       <section class="page active" id="todayPage">
+        <div class="today-date-switch"><span class="editing-note" id="todayDateNote">Viewing today</span><label for="todayDatePicker">Edit date</label><input id="todayDatePicker" type="date" aria-label="Choose a date to edit"><button id="returnToday">Today</button></div>
         <div id="morningView">
           <div class="grid-2" style="margin-top:0">
             <header class="hero"><h1>Good morning <span aria-hidden="true">☀</span></h1><p id="heroDate"></p><div class="quote">A focused today<br>builds the future you’re aiming for.</div></header>
@@ -187,6 +189,9 @@
     let editingHistoryDate='';
     function openHistoryEditor(key){editingHistoryDate=key;const d=allDays()[key]||{mainOutcome:'',tasks:[],timeBlocks:[],records:[]};$('#historyModalTitle').textContent=`Edit ${formatHistoryDate(key)}`;$('#historyOutcome').value=d.mainOutcome||'';$('#historyTasks').value=(d.tasks||[]).map(x=>`${x.d?'[x]':'[ ]'} ${x.t}`).join('\n');$('#historyTimes').value=(d.timeBlocks||[]).map(x=>`${x[1]} | ${x[0]}`).join('\n');$('#historyRecords').value=(d.records||[]).map(x=>`${x.time} | ${x.text}`).join('\n');$('#historyModal').classList.add('open')}
     function closeHistoryEditor(){$('#historyModal').classList.remove('open')}
+    function setTodayPicker(key=state.lastDate){$('#todayDatePicker').max=state.lastDate;$('#todayDatePicker').value=key;$('#todayDateNote').textContent=key===state.lastDate?'Viewing today':`Editing ${formatHistoryDate(key)}`}
+    $('#todayDatePicker').onchange=e=>{const key=e.target.value;if(!key)return;if(key===state.lastDate){setTodayPicker();return}if(!state.history[key])state.history[key]={mainOutcome:'',tasks:[],timeBlocks:[],records:[]};persist();setTodayPicker(key);openHistoryEditor(key)};
+    $('#returnToday').onclick=()=>{setTodayPicker();closeHistoryEditor();toast('Back to today')};
     $('#historyDateFilter').oninput=renderHistory;$('#clearHistoryFilter').onclick=()=>{$('#historyDateFilter').value='';renderHistory()};$$('.history-close').forEach(b=>b.onclick=closeHistoryEditor);
     $('#saveHistory').onclick=()=>{const parseLines=id=>$(id).value.split('\n').map(x=>x.trim()).filter(Boolean),tasks=parseLines('#historyTasks').map(line=>({d:/^\[x\]/i.test(line),t:line.replace(/^\[[x ]\]\s*/i,'')})),timeBlocks=parseLines('#historyTimes').map((line,i)=>{const [range,...title]=line.split('|');return [title.join('|').trim()||'Untitled',range.trim(),i%2?'lilac':'']}).filter(x=>x[1]),records=parseLines('#historyRecords').map(line=>{const [time,...text]=line.split('|');return {kind:'Text',time:time.trim(),text:text.join('|').trim()||'Untitled'}}),dayData={mainOutcome:$('#historyOutcome').value.trim(),tasks,timeBlocks,records};if(editingHistoryDate===state.lastDate){state.mainOutcome=dayData.mainOutcome;state.morningTasks=tasks;state.timeBlocks=timeBlocks;state.records=records;renderOutcomes();renderTasks();renderTimes();renderRecords()}else state.history[editingHistoryDate]=dayData;persist();closeHistoryEditor();renderHistory();toast('History updated')};
     function renderWeek(){const now=new Date(),dayIndex=(now.getDay()+6)%7,monday=new Date(now);monday.setDate(now.getDate()-dayIndex);const days=Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return {name:d.toLocaleDateString('en-GB',{weekday:'short'}),date:d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}});let html='<div class="times"><span></span>'+['08:00','10:00','12:00','14:00','16:00'].map(x=>`<span>${x}</span>`).join('')+'</div>';days.forEach(d=>{html+=`<div class="day-col"><div class="day-head"><b>${d.name}</b>${d.date}</div>`+Array.from({length:5},()=>`<div class="slot"></div>`).join('')+'</div>'});$('#weekBoard').innerHTML=html;$('#weeklyOutcomes').innerHTML='<p class="muted">No weekly outcomes yet.</p>'}
@@ -208,7 +213,7 @@
     $('[data-page="today"]').ondblclick=()=>showMode(state.mode==='morning'?'evening':'morning');
     const modeToggle=document.createElement('button');modeToggle.className='pill-btn';modeToggle.id='modeToggle';modeToggle.onclick=()=>showMode(state.mode==='morning'?'evening':'morning');$('.topbar').prepend(modeToggle);const oldShow=showMode;showMode=(mode)=>{oldShow(mode);modeToggle.textContent=mode==='morning'?'Morning ☀ · switch':'Evening ☾ · switch'};
     setInterval(()=>{if(londonDateParts().key!==currentDate.key)location.reload()},60000);
-    renderCurrentDate();renderOutcomes();applyTheme();showPage(state.page);showMode(state.mode);renderTasks();renderTimes();renderRecords();renderWeek();renderMonth();renderCountdown();renderGoals();
+    renderCurrentDate();setTodayPicker();renderOutcomes();applyTheme();showPage(state.page);showMode(state.mode);renderTasks();renderTimes();renderRecords();renderWeek();renderMonth();renderCountdown();renderGoals();
   })();
   </script>
 </body>
